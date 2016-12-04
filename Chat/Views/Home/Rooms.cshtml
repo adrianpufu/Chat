@@ -1,0 +1,33 @@
+﻿@using Chat.Models
+@model ConversationRoomViewModel
+@{
+    ViewBag.Title = "Rooms";
+}
+
+<div class="container">
+    <div class="row " style="padding-top:40px;">
+        <h3 class="text-center">Rooms</h3>
+        <br /><br />
+        <div class="col-md-8">
+            <div class="panel panel-info">
+                <div class="panel-body">
+                    <ul class="media-list">
+                        @foreach (var room in Model.ConversationRooms)
+                        {
+                            <li class="media">
+                                <div class="media-body">
+                                    <div class="media">
+                                        <div class="media-body">
+                                            @Html.ActionLink(@room.RoomName, "SingleRoom", new { roomName = @room.RoomName })
+                                            <hr />
+                                        </div>
+                                    </div>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
