@@ -11,8 +11,10 @@ using System.Data.Entity;
 namespace Chat.Hubs
 {
     //[Authorize]
+
     public class ChatHub : Hub
     {
+
         public void sendToAll(string name, string message)
         {
             // Call the addNewMessageToPage method to update clients.
@@ -32,7 +34,7 @@ namespace Chat.Hubs
             {
                 var room = db.Rooms.Where(u => u.RoomName == roomName).FirstOrDefault();
 
-                if(room != null)
+                if (room != null)
                 {
                     var message = new Message()
                     {
@@ -46,7 +48,7 @@ namespace Chat.Hubs
             }
         }
 
-        public void sendMessageTo(string who, string message)
+        public void sendMessageToUser(string who, string message)
         {
             var name = Context.User.Identity.Name;
             using (var db = new UserContext())
@@ -70,19 +72,20 @@ namespace Chat.Hubs
                     }
                     else
                     {
-                        var roomName = db.Rooms.Where(x => ((x.Users.Where(y => y.UserName == user.UserName).FirstOrDefault() != null) && (x.Users.Where(y => y.UserName == name).FirstOrDefault() != null))).FirstOrDefault().RoomName;
+                        var roomName = db.Rooms.Where(x => ((x.Users.Where(y => y.UserName == name).FirstOrDefault() != null) && (x.Users.Where(y => y.UserName == user.UserName).FirstOrDefault() != null))).FirstOrDefault().RoomName;//si e numele unuia din ei
 
                         SaveMessageToDatabase(Context.User.Identity.Name, message, roomName);
 
                         foreach (var connection in user.Connections)
                         {
-                            Clients.Client(connection.ConnectionID)
-                                .addNewMessageToPage(name + ": " + message);
+                            Clients.Client(connection.ConnectionID).addNewMessageToPage(name + ": " + message);
+                            Clients.Caller.addNewMessageToPage("message", "sent");
                         }
                     }
                 }
             }
         }
+
         public override Task OnConnected()
         {
             using (var db = new UserContext())
@@ -103,12 +106,15 @@ namespace Chat.Hubs
                     db.Users.Add(user);
                     db.SaveChanges();
                     //conexiune noua
-                    user.Connections.Add(new Connection()
+                    var conn = new Connection()
                     {
                         ConnectionID = Context.ConnectionId,
                         UserAgent = Context.Request.Headers["User-Agent"],
                         Connected = true
-                    });
+                    };
+                    user.Connections.Add(conn);
+                    db.Connections.Add(conn);
+                    db.SaveChanges();
                     //room cu el insusi
                     var room = db.Rooms.Where(u => u.RoomName == name).FirstOrDefault();
 
@@ -117,6 +123,7 @@ namespace Chat.Hubs
                         room = new ConversationRoom()
                         {
                             RoomName = name,
+                            RoomType = ChatRoomTypeEnum.PeerToPeer,
                             Users = new List<User>()
                         };
                         room.Users.Add(user);
@@ -128,15 +135,51 @@ namespace Chat.Hubs
                 }
                 else
                 {
+                    ResolveConnections(user, db);
+
                     foreach (var item in user.Rooms)
                     {
                         Groups.Add(Context.ConnectionId, item.RoomName);
                     }
                 }
-                
-                
+
             }
             return base.OnConnected();
+        }
+
+        private void ResolveConnections(User user, UserContext db)
+        {
+            var connId = Context.ConnectionId;
+          
+            if (db.Connections.Where(x => x.ConnectionID == connId).Any()) //sau mergi pe toate care au numele userului
+            {
+                var con = db.Connections.Where(x => x.ConnectionID == connId); 
+                var cons = con.AsEnumerable();
+                foreach (var c in cons)
+                {
+                    c.Connected = true;
+                    user.Connections.Add(c);
+                    db.SaveChanges();
+                }
+            }
+            else
+            {
+                var connection = new Connection()
+                {
+                    ConnectionID = Context.ConnectionId,
+                    UserAgent = Context.Request.Headers["User-Agent"],
+                    Connected = true
+                };
+                if (user.Connections == null)
+                {
+                    user.Connections = new List<Connection>();
+                }
+                user.Connections.Add(connection);
+                db.Connections.Attach(connection);
+                db.Connections.Add(connection);
+                db.SaveChanges();
+            }
+
         }
 
         public override Task OnDisconnected(bool stopCalled)
@@ -144,8 +187,12 @@ namespace Chat.Hubs
             using (var db = new UserContext())
             {
                 var connection = db.Connections.Find(Context.ConnectionId);
-                connection.Connected = false;
-                db.SaveChanges();
+
+                if (connection != null)
+                {
+                    connection.Connected = false;
+                    db.SaveChanges();
+                }
             }
             return base.OnDisconnected(stopCalled);
         }
@@ -164,10 +211,34 @@ namespace Chat.Hubs
                     room.Users.Add(user);
                     db.SaveChanges();
                     Groups.Add(Context.ConnectionId, roomName);
+                    ResolveConnections(user, db);
                 }
+
             }
             Clients.Caller.addNewMessageToPage("connected", "sucessfully");
             Clients.Group(roomName).addNewMessageToPage(Context.User.Identity.Name + " joined " + roomName + ".");
+        }
+
+        public void addToP2PRoom(string roomName)
+        {
+            using (var db = new UserContext())
+            {
+                var room = db.Rooms.Find(roomName);
+
+                if (room != null)
+                {
+                    var user = new User() { UserName = Context.User.Identity.Name };
+                    db.Users.Attach(user);
+
+                    room.Users.Add(user);
+                    db.SaveChanges();
+                    Groups.Add(Context.ConnectionId, roomName);
+                    ResolveConnections(user, db);
+
+                }
+                Clients.Caller.addNewMessageToPage("connected", "sucessfully");
+
+            }
         }
 
         public void leaveRoom(string roomName)
@@ -186,6 +257,9 @@ namespace Chat.Hubs
                     Groups.Remove(Context.ConnectionId, roomName);
                 }
             }
+            Clients.Caller.addNewMessageToPage("disconnected", "sucessfully");
+            Clients.Group(roomName).addNewMessageToPage(Context.User.Identity.Name + " left " + roomName + ".");
         }
+
     }
 }

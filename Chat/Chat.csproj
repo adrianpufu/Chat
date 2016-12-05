@@ -213,6 +213,7 @@
     </Compile>
     <Compile Include="Hubs\ChatHub.cs" />
     <Compile Include="Models\AccountViewModels.cs" />
+    <Compile Include="Models\ChatRoomTypeEnum.cs" />
     <Compile Include="Models\Connection.cs" />
     <Compile Include="Models\ConversationRoom.cs" />
     <Compile Include="Models\ConversationRoomViewModel.cs" />

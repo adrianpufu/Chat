@@ -46,9 +46,18 @@ namespace Chat.Controllers
         {
             var viewModel = new ConversationRoomViewModel();
 
+            if (db.Rooms == null)
+            {
+                var room = db.Rooms.Create();
+                room.RoomName = "TheFirstRoom";
+                room.RoomType = ChatRoomTypeEnum.UserToRoom;
+
+                db.Rooms.Add(room);
+                db.SaveChanges();
+            }
             viewModel.ConversationRooms = db.Rooms.ToList();
 
-            return View("Rooms",viewModel);
+            return View("Rooms", viewModel);
         }
 
         public ActionResult SingleRoom(string roomName)
@@ -66,12 +75,12 @@ namespace Chat.Controllers
             {
                 return HttpNotFound();
             }
-            return View("SingleRoom",viewModel);
+            return View("SingleRoom", viewModel);
         }
 
         public ActionResult SingleUser(string userName)
         {
-            if (userName.Equals(null))
+            if (String.IsNullOrWhiteSpace(userName))
             {
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
@@ -80,10 +89,13 @@ namespace Chat.Controllers
 
             viewModel.User = db.Users.Find(userName);
 
-            if (viewModel.User == null)
+            viewModel.Room = db.Rooms.Find(userName);
+
+            if ((viewModel.User == null) || (viewModel.Room == null))
             {
                 return HttpNotFound();
             }
+
             return View("SingleUser", viewModel);
         }
     }

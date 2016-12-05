@@ -11,6 +11,8 @@ namespace Chat.Models
         [Key]
         public string RoomName { get; set; }
 
+        public ChatRoomTypeEnum RoomType { get; set; }
+
         public virtual ICollection<User> Users { get; set; }
 
         public virtual ICollection<Message> Messages { get; set; }
