@@ -11,11 +11,17 @@ namespace Chat.Controllers
 {
     public class HomeController : Controller
     {
-        private UserContext db = null;
+        private UnitOfWork unitOfWork = new UnitOfWork();
+
+        RoomRepository _roomRepository = null;
+
+        UserRepository _userRepository = null;
 
         public HomeController()
         {
-            db = new UserContext();
+            RoomRepository _roomRepository = new RoomRepository(unitOfWork.RoomRepository.context);
+
+            UserRepository _userRepository = new UserRepository(unitOfWork.UserRepository.context);
         }
 
         public ActionResult Index()
@@ -46,16 +52,18 @@ namespace Chat.Controllers
         {
             var viewModel = new ConversationRoomViewModel();
 
-            if (db.Rooms == null)
+            if (unitOfWork.RoomRepository.Get().Any() == false)
             {
-                var room = db.Rooms.Create();
-                room.RoomName = "TheFirstRoom";
-                room.RoomType = ChatRoomTypeEnum.UserToRoom;
+                ConversationRoom room = new ConversationRoom()
+                {
+                    RoomName = "TheFirstRoom",
+                    RoomType = ChatRoomTypeEnum.UserToRoom
+                };
+                unitOfWork.RoomRepository.Insert(room);
 
-                db.Rooms.Add(room);
-                db.SaveChanges();
             }
-            viewModel.ConversationRooms = db.Rooms.ToList();
+
+            viewModel.ConversationRooms = unitOfWork.RoomRepository.Get();
 
             return View("Rooms", viewModel);
         }
@@ -69,7 +77,7 @@ namespace Chat.Controllers
 
             var viewModel = new SingleRoomViewModel();
 
-            viewModel.Room = db.Rooms.Find(roomName);
+            viewModel.Room = _roomRepository.GetRoomByName(roomName);
 
             if (viewModel.Room == null)
             {
@@ -87,9 +95,9 @@ namespace Chat.Controllers
 
             var viewModel = new SingleUserViewModel();
 
-            viewModel.User = db.Users.Find(userName);
+            viewModel.User = _userRepository.GetUserByName(userName);
 
-            viewModel.Room = db.Rooms.Find(userName);
+            viewModel.Room = _roomRepository.GetRoomByName(userName);
 
             if ((viewModel.User == null) || (viewModel.Room == null))
             {

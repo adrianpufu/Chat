@@ -207,7 +207,13 @@
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\ManageController.cs" />
     <Compile Include="DAL\ChatInitializer.cs" />
+    <Compile Include="DAL\GenericRepository.cs" />
+    <Compile Include="DAL\IRoomRepository.cs" />
+    <Compile Include="DAL\IUserRepository.cs" />
+    <Compile Include="DAL\RoomRepository.cs" />
+    <Compile Include="DAL\UnitOfWork.cs" />
     <Compile Include="DAL\UserContext.cs" />
+    <Compile Include="DAL\UserRepository.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
